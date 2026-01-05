@@ -1,6 +1,6 @@
 import { Engagement, Task, Highlight, InternalProject, Idea, CalendarEvent, UsefulLink, AppTab } from '../types';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = 'http://localhost:3002/api';
 
 // --- Helper for formatting dates ---
 // SQLite returns ISO strings, which is what our types expect mostly.
