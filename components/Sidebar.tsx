@@ -44,14 +44,17 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className="w-20 lg:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col flex-shrink-0 transition-all duration-300">
       {/* Logo Area */}
-      <div className="h-16 flex items-center justify-center lg:justify-start lg:px-6 border-b border-slate-100 dark:border-slate-800">
+      <button
+        onClick={() => onTabChange('home')}
+        className="h-16 flex items-center justify-center lg:justify-start lg:px-6 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors w-full"
+      >
         <div className="bg-indigo-600 text-white p-1.5 rounded-lg flex-shrink-0">
           <Activity size={24} />
         </div>
         <h1 className="hidden lg:block ml-3 text-lg font-bold bg-gradient-to-r from-indigo-700 to-indigo-500 bg-clip-text text-transparent">
           WorkSync
         </h1>
-      </div>
+      </button>
 
       {/* Navigation */}
       <nav className="flex-1 py-6 space-y-2 px-2 lg:px-4 overflow-y-auto custom-scrollbar">

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Idea, IdeaCategory, IdeaPriority, IdeaStatus } from '../types';
-import { Plus, Lightbulb, Trash2, X, AlertCircle, TrendingUp, Users, Settings, Tag, Filter } from 'lucide-react';
+import { Plus, Lightbulb, Trash2, X, AlertCircle, Users, Settings, Tag, Filter, Pencil } from 'lucide-react';
 
 interface IdeaBoardProps {
   ideas: Idea[];
@@ -11,8 +11,9 @@ interface IdeaBoardProps {
 
 const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, onDeleteIdea }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingIdea, setEditingIdea] = useState<Idea | null>(null);
   const [filterCategory, setFilterCategory] = useState<IdeaCategory | 'All'>('All');
-  
+
   const [newIdea, setNewIdea] = useState<Partial<Idea>>({
     title: '',
     description: '',
@@ -38,6 +39,17 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
     onAddIdea(idea);
     setNewIdea({ title: '', description: '', category: 'General', priority: 'Medium', status: 'New' });
     setIsModalOpen(false);
+  };
+
+  const handleEdit = (idea: Idea) => {
+    setEditingIdea({ ...idea });
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingIdea || !editingIdea.title?.trim() || !editingIdea.description?.trim()) return;
+    onUpdateIdea(editingIdea);
+    setEditingIdea(null);
   };
 
   const getCategoryIcon = (category: IdeaCategory) => {
@@ -80,20 +92,20 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
-             <select 
-               className="appearance-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2 pr-8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-               value={filterCategory}
-               onChange={(e) => setFilterCategory(e.target.value as IdeaCategory | 'All')}
-             >
-               <option value="All">All Categories</option>
-               <option value="Team">Team</option>
-               <option value="Product">Product</option>
-               <option value="Process">Process</option>
-               <option value="General">General</option>
-             </select>
-             <Filter size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <select
+              className="appearance-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2 pr-8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value as IdeaCategory | 'All')}
+            >
+              <option value="All">All Categories</option>
+              <option value="Team">Team</option>
+              <option value="Product">Product</option>
+              <option value="Process">Process</option>
+              <option value="General">General</option>
+            </select>
+            <Filter size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           </div>
-          <button 
+          <button
             onClick={() => setIsModalOpen(true)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2"
           >
@@ -110,15 +122,23 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
                 {getCategoryIcon(idea.category)} {idea.category}
               </span>
               <div className="flex items-center gap-2">
-                 <span className={`text-xs font-bold flex items-center gap-1 ${getPriorityColor(idea.priority)}`} title="Priority">
-                   <AlertCircle size={12} /> {idea.priority}
-                 </span>
-                 <button 
-                    onClick={() => onDeleteIdea(idea.id)}
-                    className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                 >
-                    <Trash2 size={16} />
-                 </button>
+                <span className={`text-xs font-bold flex items-center gap-1 ${getPriorityColor(idea.priority)}`} title="Priority">
+                  <AlertCircle size={12} /> {idea.priority}
+                </span>
+                <button
+                  onClick={() => handleEdit(idea)}
+                  className="text-slate-300 hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Edit idea"
+                >
+                  <Pencil size={16} />
+                </button>
+                <button
+                  onClick={() => onDeleteIdea(idea.id)}
+                  className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Delete idea"
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
             </div>
 
@@ -128,42 +148,41 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
             </p>
 
             <div className="mt-auto pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-               <select
-                 className={`text-xs font-semibold bg-transparent outline-none cursor-pointer ${
-                   idea.status === 'New' ? 'text-blue-600 dark:text-blue-400' :
-                   idea.status === 'Planned' ? 'text-purple-600 dark:text-purple-400' :
-                   idea.status === 'In Progress' ? 'text-amber-600 dark:text-amber-400' :
-                   idea.status === 'Implemented' ? 'text-green-600 dark:text-green-400' :
-                   'text-slate-500'
-                 }`}
-                 value={idea.status}
-                 onChange={(e) => onUpdateIdea({...idea, status: e.target.value as IdeaStatus})}
-               >
-                 <option value="New">New</option>
-                 <option value="Planned">Planned</option>
-                 <option value="In Progress">In Progress</option>
-                 <option value="Implemented">Implemented</option>
-                 <option value="Discarded">Discarded</option>
-               </select>
-               <span className="text-[10px] text-slate-400">
-                  {new Date(idea.createdAt).toLocaleDateString()}
-               </span>
+              <select
+                className={`text-xs font-semibold bg-transparent outline-none cursor-pointer ${idea.status === 'New' ? 'text-blue-600 dark:text-blue-400' :
+                  idea.status === 'Planned' ? 'text-purple-600 dark:text-purple-400' :
+                    idea.status === 'In Progress' ? 'text-amber-600 dark:text-amber-400' :
+                      idea.status === 'Implemented' ? 'text-green-600 dark:text-green-400' :
+                        'text-slate-500'
+                  }`}
+                value={idea.status}
+                onChange={(e) => onUpdateIdea({ ...idea, status: e.target.value as IdeaStatus })}
+              >
+                <option value="New">New</option>
+                <option value="Planned">Planned</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Implemented">Implemented</option>
+                <option value="Discarded">Discarded</option>
+              </select>
+              <span className="text-[10px] text-slate-400">
+                {new Date(idea.createdAt).toLocaleDateString()}
+              </span>
             </div>
           </div>
         ))}
-        
+
         {filteredIdeas.length === 0 && (
           <div className="col-span-full py-16 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-             <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Lightbulb size={32} className="text-slate-300 dark:text-slate-600" />
-             </div>
-             <p className="text-slate-500 dark:text-slate-400 mb-6">No ideas found. Be the first to add one!</p>
-             <button 
-               onClick={() => setIsModalOpen(true)}
-               className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
-             >
-               Add New Idea
-             </button>
+            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Lightbulb size={32} className="text-slate-300 dark:text-slate-600" />
+            </div>
+            <p className="text-slate-500 dark:text-slate-400 mb-6">No ideas found. Be the first to add one!</p>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
+            >
+              Add New Idea
+            </button>
           </div>
         )}
       </div>
@@ -178,37 +197,36 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
                 <X size={20} />
               </button>
             </div>
-            
+
             <form onSubmit={handleAdd} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Title</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   required
                   placeholder="Short, descriptive title"
                   className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-colors"
                   value={newIdea.title}
-                  onChange={e => setNewIdea({...newIdea, title: e.target.value})}
+                  onChange={e => setNewIdea({ ...newIdea, title: e.target.value })}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Category</label>
                 <div className="grid grid-cols-2 gap-2">
-                   {['Team', 'Product', 'Process', 'General'].map((cat) => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setNewIdea({...newIdea, category: cat as IdeaCategory})}
-                        className={`text-sm py-2 px-3 rounded-lg border transition-all text-left flex items-center gap-2 ${
-                          newIdea.category === cat 
-                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' 
-                            : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  {['Team', 'Product', 'Process', 'General'].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setNewIdea({ ...newIdea, category: cat as IdeaCategory })}
+                      className={`text-sm py-2 px-3 rounded-lg border transition-all text-left flex items-center gap-2 ${newIdea.category === cat
+                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                         }`}
-                      >
-                         {getCategoryIcon(cat as IdeaCategory)} {cat}
-                      </button>
-                   ))}
+                    >
+                      {getCategoryIcon(cat as IdeaCategory)} {cat}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -217,17 +235,16 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
                 <div className="flex gap-4">
                   {(['Low', 'Medium', 'High'] as IdeaPriority[]).map(p => (
                     <label key={p} className="flex items-center gap-2 cursor-pointer">
-                      <input 
+                      <input
                         type="radio"
                         name="priority"
                         className="text-indigo-600 focus:ring-indigo-500"
                         checked={newIdea.priority === p}
-                        onChange={() => setNewIdea({...newIdea, priority: p})}
+                        onChange={() => setNewIdea({ ...newIdea, priority: p })}
                       />
-                      <span className={`text-sm ${
-                        p === 'High' ? 'text-red-500 font-medium' : 
+                      <span className={`text-sm ${p === 'High' ? 'text-red-500 font-medium' :
                         p === 'Medium' ? 'text-orange-500' : 'text-slate-500'
-                      }`}>{p}</span>
+                        }`}>{p}</span>
                     </label>
                   ))}
                 </div>
@@ -235,28 +252,122 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label>
-                <textarea 
+                <textarea
                   required
                   placeholder="Describe the idea, enhancement or improvement..."
                   className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-colors h-32 resize-none"
                   value={newIdea.description}
-                  onChange={e => setNewIdea({...newIdea, description: e.target.value})}
+                  onChange={e => setNewIdea({ ...newIdea, description: e.target.value })}
                 />
               </div>
 
               <div className="pt-4 flex justify-end gap-3">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2 text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="px-4 py-2 bg-indigo-600 text-white font-medium hover:bg-indigo-700 rounded-lg shadow-sm transition-colors"
                 >
                   Add Idea
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Idea Modal */}
+      {editingIdea && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
+              <h2 className="text-lg font-bold text-slate-800 dark:text-white">Edit Idea</h2>
+              <button onClick={() => setEditingIdea(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Title</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Short, descriptive title"
+                  className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-colors"
+                  value={editingIdea.title}
+                  onChange={e => setEditingIdea({ ...editingIdea, title: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Category</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['Team', 'Product', 'Process', 'General'].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setEditingIdea({ ...editingIdea, category: cat as IdeaCategory })}
+                      className={`text-sm py-2 px-3 rounded-lg border transition-all text-left flex items-center gap-2 ${editingIdea.category === cat
+                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        }`}
+                    >
+                      {getCategoryIcon(cat as IdeaCategory)} {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Priority</label>
+                <div className="flex gap-4">
+                  {(['Low', 'Medium', 'High'] as IdeaPriority[]).map(p => (
+                    <label key={p} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="editPriority"
+                        className="text-indigo-600 focus:ring-indigo-500"
+                        checked={editingIdea.priority === p}
+                        onChange={() => setEditingIdea({ ...editingIdea, priority: p })}
+                      />
+                      <span className={`text-sm ${p === 'High' ? 'text-red-500 font-medium' :
+                        p === 'Medium' ? 'text-orange-500' : 'text-slate-500'
+                        }`}>{p}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label>
+                <textarea
+                  required
+                  placeholder="Describe the idea, enhancement or improvement..."
+                  className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-colors h-32 resize-none"
+                  value={editingIdea.description}
+                  onChange={e => setEditingIdea({ ...editingIdea, description: e.target.value })}
+                />
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingIdea(null)}
+                  className="px-4 py-2 text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 text-white font-medium hover:bg-indigo-700 rounded-lg shadow-sm transition-colors"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>
