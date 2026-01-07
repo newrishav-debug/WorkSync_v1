@@ -133,14 +133,14 @@ function initDatabase() {
       updatedAt TEXT
     )`);
 
-    // Seed Data if Engagements is empty
-    db.get("SELECT count(*) as count FROM engagements", (err, row) => {
-      if (err) console.error(err);
-      if (row.count === 0) {
-        console.log("Database empty. Seeding data...");
-        seedDatabase();
-      }
-    });
+    // Seed Data disabled - start with empty database
+    // db.get("SELECT count(*) as count FROM engagements", (err, row) => {
+    //   if (err) console.error(err);
+    //   if (row.count === 0) {
+    //     console.log("Database empty. Seeding data...");
+    //     seedDatabase();
+    //   }
+    // });
   });
 }
 
