@@ -159,13 +159,20 @@ export const deleteUsefulLinkAPI = async (id: string): Promise<void> => {
 };
 
 // --- Settings ---
+const DEFAULT_TAB_ORDER: AppTab[] = ['home', 'engagements', 'calendar', 'tasks', 'highlights', 'projects', 'ideas', 'links', 'notes'];
+
 export const fetchTabOrder = async (): Promise<AppTab[]> => {
     try {
         const res = await fetch(`${API_BASE}/settings/tabOrder`);
         const data = await res.json();
-        return data || ['home', 'engagements', 'calendar', 'tasks', 'highlights', 'projects', 'ideas', 'links'];
+        if (!data || !Array.isArray(data)) {
+            return DEFAULT_TAB_ORDER;
+        }
+        // Ensure all tabs are present (in case new tabs were added)
+        const missingTabs = DEFAULT_TAB_ORDER.filter(tab => !data.includes(tab));
+        return [...data, ...missingTabs];
     } catch {
-        return ['home', 'engagements', 'calendar', 'tasks', 'highlights', 'projects', 'ideas', 'links'];
+        return DEFAULT_TAB_ORDER;
     }
 };
 
