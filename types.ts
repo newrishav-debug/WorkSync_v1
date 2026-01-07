@@ -129,7 +129,16 @@ export interface UsefulLink {
   createdAt: string;
 }
 
-export type AppTab = 'home' | 'engagements' | 'tasks' | 'highlights' | 'projects' | 'ideas' | 'calendar' | 'links';
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AppTab = 'home' | 'engagements' | 'tasks' | 'highlights' | 'projects' | 'ideas' | 'calendar' | 'links' | 'notes';
 export type ViewState = 'dashboard' | 'detail';
 
 export interface ViewStateData {

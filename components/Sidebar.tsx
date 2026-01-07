@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, Layout, CheckSquare, Sun, Moon, Zap, FolderKanban, Lightbulb, Calendar, Home, Link, Settings, ChevronUp, ChevronDown, Check } from 'lucide-react';
+import { Activity, Layout, CheckSquare, Sun, Moon, Zap, FolderKanban, Lightbulb, Calendar, Home, Link, Settings, ChevronUp, ChevronDown, Check, StickyNote } from 'lucide-react';
 import { AppTab } from '../types';
 
 interface SidebarProps {
@@ -20,6 +20,7 @@ const ALL_NAV_ITEMS: Record<AppTab, { label: string; icon: any }> = {
   projects: { label: 'Internal Projects', icon: FolderKanban },
   ideas: { label: 'Idea Board', icon: Lightbulb },
   links: { label: 'Useful Links', icon: Link },
+  notes: { label: 'Notes', icon: StickyNote },
 };
 
 const Sidebar: React.FC<SidebarProps> = ({

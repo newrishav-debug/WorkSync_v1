@@ -123,6 +123,16 @@ function initDatabase() {
       createdAt TEXT
     )`);
 
+    // 10. Notes Table
+    db.run(`CREATE TABLE IF NOT EXISTS notes (
+      id TEXT PRIMARY KEY,
+      title TEXT,
+      content TEXT,
+      tags TEXT,
+      createdAt TEXT,
+      updatedAt TEXT
+    )`);
+
     // Seed Data if Engagements is empty
     db.get("SELECT count(*) as count FROM engagements", (err, row) => {
       if (err) console.error(err);

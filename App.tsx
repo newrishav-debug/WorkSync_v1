@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { fetchEngagements, saveEngagementAPI, fetchTasks, saveTaskAPI, fetchHighlights, saveHighlightAPI, fetchProjects, saveProjectAPI, fetchIdeas, saveIdeaAPI, fetchCalendarEvents, saveCalendarEventAPI, fetchUsefulLinks, saveUsefulLinkAPI, fetchTabOrder, saveTabOrderAPI, deleteEngagementAPI, deleteTaskAPI, deleteHighlightAPI, deleteProjectAPI, deleteIdeaAPI, deleteCalendarEventAPI, deleteUsefulLinkAPI } from './services/apiService';
-import { Engagement, ViewStateData, Task, AppTab, Highlight, InternalProject, Idea, CalendarEvent, UsefulLink, ProjectTask } from './types';
+import { fetchEngagements, saveEngagementAPI, fetchTasks, saveTaskAPI, fetchHighlights, saveHighlightAPI, fetchProjects, saveProjectAPI, fetchIdeas, saveIdeaAPI, fetchCalendarEvents, saveCalendarEventAPI, fetchUsefulLinks, saveUsefulLinkAPI, fetchTabOrder, saveTabOrderAPI, deleteEngagementAPI, deleteTaskAPI, deleteHighlightAPI, deleteProjectAPI, deleteIdeaAPI, deleteCalendarEventAPI, deleteUsefulLinkAPI, fetchNotes, saveNoteAPI, deleteNoteAPI } from './services/apiService';
+import { Engagement, ViewStateData, Task, AppTab, Highlight, InternalProject, Idea, CalendarEvent, UsefulLink, ProjectTask, Note } from './types';
 import Dashboard from './components/Dashboard';
 import EngagementDetail from './components/EngagementDetail';
 import AddEngagementModal from './components/AddEngagementModal';
@@ -16,6 +16,7 @@ import Homepage from './components/Homepage';
 import UsefulLinks from './components/UsefulLinks';
 import EventDetailModal from './components/EventDetailModal';
 import WorldClock from './components/WorldClock';
+import Notes from './components/Notes';
 
 const App: React.FC = () => {
   // State for data
@@ -26,7 +27,8 @@ const App: React.FC = () => {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [usefulLinks, setUsefulLinks] = useState<UsefulLink[]>([]);
-  const [tabOrder, setTabOrder] = useState<AppTab[]>(['home', 'engagements', 'calendar', 'tasks', 'highlights', 'projects', 'ideas', 'links']);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [tabOrder, setTabOrder] = useState<AppTab[]>(['home', 'engagements', 'calendar', 'tasks', 'highlights', 'projects', 'ideas', 'links', 'notes']);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // State for view routing
@@ -62,7 +64,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [eng, tsk, hlt, prj, ids, cal, lnk, ord] = await Promise.all([
+        const [eng, tsk, hlt, prj, ids, cal, lnk, nts, ord] = await Promise.all([
           fetchEngagements(),
           fetchTasks(),
           fetchHighlights(),
@@ -70,6 +72,7 @@ const App: React.FC = () => {
           fetchIdeas(),
           fetchCalendarEvents(),
           fetchUsefulLinks(),
+          fetchNotes(),
           fetchTabOrder()
         ]);
         setEngagements(eng);
@@ -79,6 +82,7 @@ const App: React.FC = () => {
         setIdeas(ids);
         setCalendarEvents(cal);
         setUsefulLinks(lnk);
+        setNotes(nts);
         setTabOrder(ord);
         setIsLoaded(true);
       } catch (err) {
@@ -233,6 +237,19 @@ const App: React.FC = () => {
     await deleteUsefulLinkAPI(id);
   };
 
+  const handleAddNote = async (note: Note) => {
+    setNotes(prev => [note, ...prev]);
+    await saveNoteAPI(note);
+  };
+  const handleUpdateNote = async (updatedNote: Note) => {
+    setNotes(prev => prev.map(n => n.id === updatedNote.id ? updatedNote : n));
+    await saveNoteAPI(updatedNote);
+  };
+  const handleDeleteNote = async (id: string) => {
+    setNotes(prev => prev.filter(n => n.id !== id));
+    await deleteNoteAPI(id);
+  };
+
   const handleTabChange = (tab: AppTab) => { setViewState(prev => ({ ...prev, tab, view: 'dashboard' })); };
 
   const handleReorderTabs = async (order: AppTab[]) => {
@@ -275,7 +292,7 @@ const App: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
           {/* Top Clock Bar */}
-          <WorldClock />
+          <WorldClock minimal={viewState.tab !== 'home'} />
 
           {viewState.tab === 'home' && (
             <Homepage
@@ -286,6 +303,7 @@ const App: React.FC = () => {
               ideas={ideas}
               calendarEvents={calendarEvents}
               usefulLinks={usefulLinks}
+              notes={notes}
               onNavigate={handleTabChange}
               onUpdateTask={handleUpdateTask}
               onDeleteTask={handleDeleteTask}
@@ -310,6 +328,7 @@ const App: React.FC = () => {
           {viewState.tab === 'ideas' && <IdeaBoard ideas={ideas} onAddIdea={handleAddIdea} onUpdateIdea={handleUpdateIdea} onDeleteIdea={handleDeleteIdea} />}
           {viewState.tab === 'calendar' && <CalendarView events={calendarEvents} onAddEvent={handleAddEvent} onUpdateEvent={handleUpdateEvent} onDeleteEvent={handleDeleteEvent} />}
           {viewState.tab === 'links' && <UsefulLinks links={usefulLinks} onAddLink={handleAddLink} onDeleteLink={handleDeleteLink} />}
+          {viewState.tab === 'notes' && <Notes notes={notes} onAddNote={handleAddNote} onUpdateNote={handleUpdateNote} onDeleteNote={handleDeleteNote} />}
 
         </div>
       </main>

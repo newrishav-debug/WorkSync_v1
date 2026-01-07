@@ -1,4 +1,4 @@
-import { Engagement, Task, Highlight, InternalProject, Idea, CalendarEvent, UsefulLink, AppTab } from '../types';
+import { Engagement, Task, Highlight, InternalProject, Idea, CalendarEvent, UsefulLink, AppTab, Note } from '../types';
 
 const API_BASE = 'http://localhost:3002/api';
 
@@ -178,3 +178,23 @@ export const saveTabOrderAPI = async (order: AppTab[]): Promise<void> => {
     await handleResponse(res, 'save tab order');
 };
 
+// --- Notes ---
+export const fetchNotes = async (): Promise<Note[]> => {
+    const res = await fetch(`${API_BASE}/notes`);
+    await handleResponse(res, 'fetch notes');
+    return res.json();
+};
+
+export const saveNoteAPI = async (note: Note): Promise<void> => {
+    const res = await fetch(`${API_BASE}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(note),
+    });
+    await handleResponse(res, 'save note');
+};
+
+export const deleteNoteAPI = async (id: string): Promise<void> => {
+    const res = await fetch(`${API_BASE}/notes/${id}`, { method: 'DELETE' });
+    await handleResponse(res, 'delete note');
+};

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { Engagement, Task, Highlight, InternalProject, Idea, CalendarEvent, AppTab, UsefulLink } from '../types';
-import { Briefcase, CheckSquare, Calendar, Zap, FolderKanban, Lightbulb, ArrowRight, AlertTriangle, Flag, Clock, Link as LinkIcon, ExternalLink, Circle, CheckCircle2, X } from 'lucide-react';
+import { Engagement, Task, Highlight, InternalProject, Idea, CalendarEvent, AppTab, UsefulLink, Note } from '../types';
+import { Briefcase, CheckSquare, Calendar, Zap, FolderKanban, Lightbulb, ArrowRight, AlertTriangle, Flag, Clock, Link as LinkIcon, ExternalLink, Circle, CheckCircle2, X, StickyNote } from 'lucide-react';
 
 interface HomepageProps {
   engagements: Engagement[];
@@ -10,6 +10,7 @@ interface HomepageProps {
   ideas: Idea[];
   calendarEvents: CalendarEvent[];
   usefulLinks: UsefulLink[];
+  notes: Note[];
   onNavigate: (tab: AppTab) => void;
   onUpdateTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
@@ -24,6 +25,7 @@ const Homepage: React.FC<HomepageProps> = ({
   ideas,
   calendarEvents,
   usefulLinks,
+  notes,
   onNavigate,
   onUpdateTask,
   onDeleteTask,
@@ -82,6 +84,11 @@ const Homepage: React.FC<HomepageProps> = ({
       return null;
     }
   };
+
+  // Recent Notes (Top 3 most recently updated)
+  const recentNotes = useMemo(() => {
+    return [...notes].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 3);
+  }, [notes]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
@@ -148,8 +155,8 @@ const Homepage: React.FC<HomepageProps> = ({
                         key={event.id}
                         onClick={() => onEventClick(event)}
                         className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-all group/meeting ${isCurrent ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500' :
-                            isPast ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 opacity-60' :
-                              'bg-white dark:bg-slate-800/30 border-slate-100 dark:border-slate-800 shadow-sm'
+                          isPast ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 opacity-60' :
+                            'bg-white dark:bg-slate-800/30 border-slate-100 dark:border-slate-800 shadow-sm'
                           } border transition-colors`}
                       >
                         <div className="flex justify-between items-start mb-1">
@@ -250,6 +257,8 @@ const Homepage: React.FC<HomepageProps> = ({
           </div>
         </div>
 
+        {/* ROW 1: Client Engagements, Internal Projects, Notes */}
+
         {/* Engagement Pulse */}
         <div
           onClick={() => onNavigate('engagements')}
@@ -292,6 +301,66 @@ const Homepage: React.FC<HomepageProps> = ({
           <h3 className="text-lg font-bold text-slate-800 dark:text-white">Internal Projects</h3>
           <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">{activeProjectsCount}</p>
           <p className="text-xs text-slate-500 dark:text-slate-400">Projects currently in progress</p>
+        </div>
+
+        {/* Recent Notes Widget */}
+        <div
+          onClick={() => onNavigate('notes')}
+          className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-amber-200 dark:hover:border-amber-900/50 transition-all cursor-pointer group"
+        >
+          <div className="flex justify-between items-start mb-2">
+            <div className="bg-amber-100 dark:bg-amber-900/30 p-2.5 rounded-lg text-amber-600 dark:text-amber-400">
+              <StickyNote size={24} />
+            </div>
+            <ArrowRight size={20} className="text-slate-300 group-hover:text-amber-500 transition-colors" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-3">Recent Notes</h3>
+          <div className="space-y-2">
+            {recentNotes.length > 0 ? (
+              recentNotes.map(note => (
+                <div
+                  key={note.id}
+                  className="flex items-start gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{note.title || 'Untitled'}</p>
+                    <p className="text-xs text-slate-400 truncate">{note.content || 'No content'}</p>
+                  </div>
+                  {note.tags.length > 0 && (
+                    <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded flex-shrink-0">
+                      {note.tags[0]}
+                    </span>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-slate-400 italic">No notes yet. Start capturing your thoughts!</p>
+            )}
+          </div>
+        </div>
+
+        {/* ROW 2: Recent Highlights, Quick Links, Idea */}
+
+        {/* Recent Highlight */}
+        <div
+          onClick={() => onNavigate('highlights')}
+          className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-purple-200 dark:hover:border-purple-900/50 transition-all cursor-pointer group"
+        >
+          <div className="flex justify-between items-start mb-2">
+            <div className="bg-purple-100 dark:bg-purple-900/30 p-2.5 rounded-lg text-purple-600 dark:text-purple-400">
+              <Zap size={24} />
+            </div>
+            <ArrowRight size={20} className="text-slate-300 group-hover:text-purple-500 transition-colors" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Recent Highlight</h3>
+          {recentHighlight ? (
+            <div className="text-sm">
+              <p className="font-medium text-slate-800 dark:text-slate-200 line-clamp-2">"{recentHighlight.content}"</p>
+              <p className="text-xs text-slate-400 mt-2">{new Date(recentHighlight.date).toLocaleDateString()}</p>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400 italic">No highlights recorded yet.</p>
+          )}
         </div>
 
         {/* Quick Links Widget */}
@@ -340,28 +409,6 @@ const Homepage: React.FC<HomepageProps> = ({
           </div>
         </div>
 
-        {/* Recent Highlight */}
-        <div
-          onClick={() => onNavigate('highlights')}
-          className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-purple-200 dark:hover:border-purple-900/50 transition-all cursor-pointer group"
-        >
-          <div className="flex justify-between items-start mb-2">
-            <div className="bg-purple-100 dark:bg-purple-900/30 p-2.5 rounded-lg text-purple-600 dark:text-purple-400">
-              <Zap size={24} />
-            </div>
-            <ArrowRight size={20} className="text-slate-300 group-hover:text-purple-500 transition-colors" />
-          </div>
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Recent Highlight</h3>
-          {recentHighlight ? (
-            <div className="text-sm">
-              <p className="font-medium text-slate-800 dark:text-slate-200 line-clamp-2">"{recentHighlight.content}"</p>
-              <p className="text-xs text-slate-400 mt-2">{new Date(recentHighlight.date).toLocaleDateString()}</p>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400 italic">No highlights recorded yet.</p>
-          )}
-        </div>
-
         {/* Idea Spark */}
         <div
           onClick={() => onNavigate('ideas')}
@@ -378,6 +425,7 @@ const Homepage: React.FC<HomepageProps> = ({
             {ideas.length} Ideas Logged
           </div>
         </div>
+
 
       </div>
     </div>

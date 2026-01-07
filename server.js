@@ -238,6 +238,32 @@ app.delete('/api/links/:id', (req, res) => {
     });
 });
 
+// 8. Notes
+app.get('/api/notes', (req, res) => {
+    db.all("SELECT * FROM notes", [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        const formatted = rows.map(r => ({
+            ...r,
+            tags: JSON.parse(r.tags || '[]')
+        }));
+        res.json(formatted);
+    });
+});
+app.post('/api/notes', (req, res) => {
+    const n = req.body;
+    const sql = `INSERT OR REPLACE INTO notes (id, title, content, tags, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)`;
+    db.run(sql, [n.id, n.title, n.content, JSON.stringify(n.tags || []), n.createdAt, n.updatedAt], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Saved" });
+    });
+});
+app.delete('/api/notes/:id', (req, res) => {
+    db.run("DELETE FROM notes WHERE id = ?", req.params.id, (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Deleted" });
+    });
+});
+
 // Tab Order (Simple key-value store in a persistent config table, or just json file. 
 // For now, let's just make a simple key-value table if we want to be pure DB, 
 // OR just keep using localstorage for UI prefs like tab order? 
