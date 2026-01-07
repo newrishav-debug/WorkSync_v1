@@ -145,8 +145,12 @@ const Homepage: React.FC<HomepageProps> = ({
                 {todaysEvents.length > 0 ? (
                   todaysEvents.map(event => {
                     const now = new Date();
-                    const start = new Date(`${event.date}T${event.startTime}`);
-                    const end = new Date(`${event.date}T${event.endTime}`);
+                    // Parse date/time in local timezone to avoid UTC interpretation issues
+                    const [year, month, day] = event.date.split('-').map(Number);
+                    const [startHour, startMin] = event.startTime.split(':').map(Number);
+                    const [endHour, endMin] = event.endTime.split(':').map(Number);
+                    const start = new Date(year, month - 1, day, startHour, startMin);
+                    const end = new Date(year, month - 1, day, endHour, endMin);
                     const isPast = end < now;
                     const isCurrent = start <= now && end >= now;
 
