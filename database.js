@@ -23,6 +23,7 @@ function initDatabase() {
     // 1. Engagements Table
     db.run(`CREATE TABLE IF NOT EXISTS engagements (
       id TEXT PRIMARY KEY,
+      userId TEXT,
       engagementNumber TEXT,
       orgId TEXT,
       accountName TEXT,
@@ -37,6 +38,7 @@ function initDatabase() {
     // 2. Tasks Table
     db.run(`CREATE TABLE IF NOT EXISTS tasks (
       id TEXT PRIMARY KEY,
+      userId TEXT,
       content TEXT,
       isCompleted INTEGER,
       type TEXT,
@@ -51,6 +53,7 @@ function initDatabase() {
     // 3. Projects Table
     db.run(`CREATE TABLE IF NOT EXISTS projects (
       id TEXT PRIMARY KEY,
+      userId TEXT,
       name TEXT,
       description TEXT,
       status TEXT,
@@ -81,6 +84,7 @@ function initDatabase() {
     // 6. Highlights Table
     db.run(`CREATE TABLE IF NOT EXISTS highlights (
       id TEXT PRIMARY KEY,
+      userId TEXT,
       content TEXT,
       impact TEXT,
       date TEXT,
@@ -92,6 +96,7 @@ function initDatabase() {
     // 7. Ideas Table
     db.run(`CREATE TABLE IF NOT EXISTS ideas (
       id TEXT PRIMARY KEY,
+      userId TEXT,
       title TEXT,
       description TEXT,
       category TEXT,
@@ -103,6 +108,7 @@ function initDatabase() {
     // 8. Calendar Events Table
     db.run(`CREATE TABLE IF NOT EXISTS calendar_events (
       id TEXT PRIMARY KEY,
+      userId TEXT,
       title TEXT,
       description TEXT,
       date TEXT,
@@ -116,6 +122,7 @@ function initDatabase() {
     // 9. Useful Links Table
     db.run(`CREATE TABLE IF NOT EXISTS useful_links (
       id TEXT PRIMARY KEY,
+      userId TEXT,
       title TEXT,
       url TEXT,
       category TEXT,
@@ -126,6 +133,7 @@ function initDatabase() {
     // 10. Notes Table
     db.run(`CREATE TABLE IF NOT EXISTS notes (
       id TEXT PRIMARY KEY,
+      userId TEXT,
       title TEXT,
       content TEXT,
       tags TEXT,
@@ -133,15 +141,72 @@ function initDatabase() {
       updatedAt TEXT
     )`);
 
-    // Seed Data disabled - start with empty database
-    // db.get("SELECT count(*) as count FROM engagements", (err, row) => {
-    //   if (err) console.error(err);
-    //   if (row.count === 0) {
-    //     console.log("Database empty. Seeding data...");
-    //     seedDatabase();
-    //   }
-    // });
+    // 11. Users Table (for authentication)
+    db.run(`CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      passwordHash TEXT NOT NULL,
+      name TEXT NOT NULL,
+      createdAt TEXT NOT NULL
+    )`);
+
+    // Migrate existing data to multi-tenancy (add userId columns if needed)
+    migrateToMultiTenancy();
   });
+}
+
+// Migration function to add userId columns to existing tables and assign data to Rishav
+function migrateToMultiTenancy() {
+  const RISHAV_EMAIL = 'newrishav@gmail.com';
+  const tables = ['engagements', 'tasks', 'projects', 'highlights', 'ideas', 'calendar_events', 'useful_links', 'notes'];
+
+  // First, add userId column to each table if it doesn't exist
+  tables.forEach(table => {
+    db.run(`ALTER TABLE ${table} ADD COLUMN userId TEXT`, (err) => {
+      // Ignore error - column already exists
+    });
+  });
+
+  // Also add userId to settings table
+  db.run(`ALTER TABLE settings ADD COLUMN userId TEXT`, (err) => {
+    // Ignore error - column already exists
+  });
+
+  // After a short delay to ensure columns are added, migrate existing data
+  setTimeout(() => {
+    db.get("SELECT id FROM users WHERE LOWER(email) = LOWER(?)", [RISHAV_EMAIL], (err, user) => {
+      if (err) {
+        console.error('Migration error finding user:', err);
+        return;
+      }
+      if (!user) {
+        console.log(`Migration: User ${RISHAV_EMAIL} not found. Existing data will remain unassigned until user registers.`);
+        return;
+      }
+
+      console.log(`Migration: Assigning existing data to user ${RISHAV_EMAIL} (${user.id})`);
+
+      // Update all tables to assign existing data (where userId is NULL) to Rishav
+      tables.forEach(table => {
+        db.run(`UPDATE ${table} SET userId = ? WHERE userId IS NULL`, [user.id], function (err) {
+          if (err) {
+            console.error(`Migration error updating ${table}:`, err);
+          } else if (this.changes > 0) {
+            console.log(`Migration: Assigned ${this.changes} rows in ${table} to ${RISHAV_EMAIL}`);
+          }
+        });
+      });
+
+      // Also migrate settings
+      db.run(`UPDATE settings SET userId = ? WHERE userId IS NULL`, [user.id], function (err) {
+        if (err) {
+          console.error('Migration error updating settings:', err);
+        } else if (this.changes > 0) {
+          console.log(`Migration: Assigned ${this.changes} settings to ${RISHAV_EMAIL}`);
+        }
+      });
+    });
+  }, 500);
 }
 
 function seedDatabase() {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Activity, Layout, CheckSquare, Sun, Moon, Zap, FolderKanban, Lightbulb, Calendar, Home, Link, Settings, ChevronUp, ChevronDown, Check, StickyNote } from 'lucide-react';
+import { Activity, Layout, CheckSquare, Sun, Moon, Zap, FolderKanban, Lightbulb, Calendar, Home, Link, Settings, ChevronUp, ChevronDown, Check, StickyNote, LogOut } from 'lucide-react';
 import { AppTab } from '../types';
+import { useAuth } from './AuthContext';
 
 interface SidebarProps {
   currentTab: AppTab;
@@ -21,6 +22,39 @@ const ALL_NAV_ITEMS: Record<AppTab, { label: string; icon: any }> = {
   ideas: { label: 'Idea Board', icon: Lightbulb },
   links: { label: 'Useful Links', icon: Link },
   notes: { label: 'Notes', icon: StickyNote },
+};
+
+// User section component showing current user and logout button
+const UserSection: React.FC = () => {
+  const { user, logout } = useAuth();
+
+  const initials = user?.name
+    ?.split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || '??';
+
+  return (
+    <div className="w-full mt-2 space-y-2">
+      <div className="hidden lg:flex items-center gap-3 px-2 py-2 w-full">
+        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold text-xs border border-indigo-200 dark:border-indigo-800">
+          {initials}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{user?.name || 'User'}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.email}</p>
+        </div>
+      </div>
+      <button
+        onClick={logout}
+        className="w-full flex items-center justify-center lg:justify-start p-2 rounded-lg text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+      >
+        <LogOut size={20} />
+        <span className="hidden lg:block ml-3 text-sm font-medium">Logout</span>
+      </button>
+    </div>
+  );
 };
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -130,14 +164,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </span>
         </button>
 
-        <div className="hidden lg:flex items-center gap-3 px-2 py-2 w-full mt-2">
-          <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold text-xs border border-indigo-200 dark:border-indigo-800">
-            RD
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">Rishav Dutta</p>
-          </div>
-        </div>
+        <UserSection />
       </div>
     </div>
   );

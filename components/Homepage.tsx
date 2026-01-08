@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Engagement, Task, Highlight, InternalProject, Idea, CalendarEvent, AppTab, UsefulLink, Note } from '../types';
 import { Briefcase, CheckSquare, Calendar, Zap, FolderKanban, Lightbulb, ArrowRight, AlertTriangle, Flag, Clock, Link as LinkIcon, ExternalLink, Circle, CheckCircle2, X, StickyNote } from 'lucide-react';
+import { useAuth } from './AuthContext';
 
 interface HomepageProps {
   engagements: Engagement[];
@@ -31,6 +32,7 @@ const Homepage: React.FC<HomepageProps> = ({
   onDeleteTask,
   onEventClick
 }) => {
+  const { user } = useAuth();
   const today = new Date();
 
   // -- Greeting Logic --
@@ -95,7 +97,7 @@ const Homepage: React.FC<HomepageProps> = ({
       {/* Welcome Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-2">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-white">{getGreeting()}, Rishav</h1>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-white">{getGreeting()}, {user?.name?.split(' ')[0] || 'there'}</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
             Here is what's happening in your workspace today, {today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}.
           </p>
