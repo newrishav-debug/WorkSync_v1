@@ -9,11 +9,11 @@ interface HighlightsProps {
   onDeleteHighlight: (id: string) => void;
 }
 
-const Highlights: React.FC<HighlightsProps> = ({ 
-  highlights, 
-  onAddHighlight, 
-  onUpdateHighlight, 
-  onDeleteHighlight 
+const Highlights: React.FC<HighlightsProps> = ({
+  highlights,
+  onAddHighlight,
+  onUpdateHighlight,
+  onDeleteHighlight
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [newHighlightContent, setNewHighlightContent] = useState('');
@@ -52,7 +52,7 @@ const Highlights: React.FC<HighlightsProps> = ({
       const d = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       // Adjust for timezone offset to avoid previous day
       const offset = d.getTimezoneOffset();
-      const adjusted = new Date(d.getTime() - (offset*60*1000));
+      const adjusted = new Date(d.getTime() - (offset * 60 * 1000));
       dateStr = adjusted.toISOString().slice(0, 10);
     }
 
@@ -80,7 +80,7 @@ const Highlights: React.FC<HighlightsProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+    <div className="w-full space-y-6 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Monthly Highlights</h2>
@@ -94,7 +94,7 @@ const Highlights: React.FC<HighlightsProps> = ({
           <button onClick={() => navigateMonth('prev')} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
             <ChevronLeft size={20} className="text-slate-500 dark:text-slate-400" />
           </button>
-          
+
           <div className="text-center">
             <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center justify-center gap-2">
               <Zap size={18} className="text-indigo-500" />
@@ -114,7 +114,7 @@ const Highlights: React.FC<HighlightsProps> = ({
             {filteredHighlights.length > 0 ? (
               filteredHighlights.map(highlight => (
                 <div key={highlight.id} className="group flex flex-col gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-all relative">
-                  <button 
+                  <button
                     onClick={() => onDeleteHighlight(highlight.id)}
                     className="absolute top-3 right-3 p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                     title="Delete highlight"
@@ -123,19 +123,19 @@ const Highlights: React.FC<HighlightsProps> = ({
                   </button>
 
                   <div className="pr-8">
-                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1 block">Highlight</label>
-                     <input 
-                       type="text"
-                       className="w-full text-base font-semibold text-slate-800 dark:text-white bg-transparent border-b border-transparent hover:border-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
-                       value={highlight.content}
-                       onChange={(e) => handleUpdateField(highlight, 'content', e.target.value)}
-                       placeholder="Highlight title..."
-                     />
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1 block">Highlight</label>
+                    <input
+                      type="text"
+                      className="w-full text-base font-semibold text-slate-800 dark:text-white bg-transparent border-b border-transparent hover:border-slate-200 focus:border-indigo-500 focus:outline-none transition-colors"
+                      value={highlight.content}
+                      onChange={(e) => handleUpdateField(highlight, 'content', e.target.value)}
+                      placeholder="Highlight title..."
+                    />
                   </div>
 
                   <div>
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1 block">Impact</label>
-                    <textarea 
+                    <textarea
                       className="w-full text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 rounded-lg p-2 border border-transparent focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all resize-none h-20"
                       placeholder="Describe the impact of this highlight..."
                       value={highlight.impact}
@@ -146,20 +146,20 @@ const Highlights: React.FC<HighlightsProps> = ({
                   <div className="flex items-start sm:items-center flex-col sm:flex-row gap-4 pt-2 border-t border-slate-100 dark:border-slate-800 mt-1">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${highlight.needsFollowUp ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'}`}>
-                         {highlight.needsFollowUp && <CheckCircle2 size={14} className="text-white" />}
+                        {highlight.needsFollowUp && <CheckCircle2 size={14} className="text-white" />}
                       </div>
-                      <input 
-                        type="checkbox" 
-                        className="hidden" 
+                      <input
+                        type="checkbox"
+                        className="hidden"
                         checked={highlight.needsFollowUp}
                         onChange={(e) => handleUpdateField(highlight, 'needsFollowUp', e.target.checked)}
                       />
                       <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Follow-up needed</span>
                     </label>
-                    
+
                     {highlight.needsFollowUp && (
                       <div className="flex-1 w-full animate-fade-in">
-                        <input 
+                        <input
                           type="text"
                           placeholder="Add context for follow-up..."
                           className="w-full text-sm text-slate-700 dark:text-slate-300 bg-transparent border-b border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:outline-none py-1"
@@ -173,11 +173,11 @@ const Highlights: React.FC<HighlightsProps> = ({
               ))
             ) : (
               <div className="text-center py-12 text-slate-400 dark:text-slate-500">
-                 <div className="bg-slate-50 dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Zap size={24} className="opacity-50 text-indigo-500"/>
-                 </div>
-                 <p>No highlights recorded for {currentMonthYear}.</p>
-                 <p className="text-sm">Capture your wins and key moments!</p>
+                <div className="bg-slate-50 dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Zap size={24} className="opacity-50 text-indigo-500" />
+                </div>
+                <p>No highlights recorded for {currentMonthYear}.</p>
+                <p className="text-sm">Capture your wins and key moments!</p>
               </div>
             )}
           </div>
@@ -187,15 +187,15 @@ const Highlights: React.FC<HighlightsProps> = ({
             <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded-lg text-indigo-600 dark:text-indigo-400">
               <Plus size={20} />
             </div>
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder={`Add a new highlight for ${currentMonthYear}...`}
               className="flex-1 bg-transparent border-none focus:ring-0 text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
               value={newHighlightContent}
               onChange={(e) => setNewHighlightContent(e.target.value)}
             />
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={!newHighlightContent.trim()}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
             >

@@ -45,6 +45,19 @@ const WorldClock: React.FC<WorldClockProps> = ({ minimal = false }) => {
     }).format(date);
   };
 
+  const getTzAbbr = (date: Date, tz: string) => {
+    // Custom overrides requested by user
+    if (tz === 'Asia/Kolkata') return 'IST';
+    if (tz === 'Australia/Sydney') return 'APC';
+
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      timeZoneName: 'short',
+    })
+      .formatToParts(date)
+      .find((part) => part.type === 'timeZoneName')?.value || '';
+  };
+
   // Minimal mode: just show local time in a compact bar
   if (minimal) {
     return (
@@ -54,6 +67,9 @@ const WorldClock: React.FC<WorldClockProps> = ({ minimal = false }) => {
         </span>
         <span className="text-xs">
           {formatDate(time, localTz)}
+        </span>
+        <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-500">
+          {getTzAbbr(time, localTz)}
         </span>
       </div>
     );
@@ -71,15 +87,23 @@ const WorldClock: React.FC<WorldClockProps> = ({ minimal = false }) => {
               <div
                 key={tz.zone}
                 className={`flex flex-col p-3 rounded-xl border transition-all duration-300 ${isLocal
-                    ? 'relative z-10 bg-indigo-50 dark:bg-indigo-900/20 border-indigo-400 dark:border-indigo-500/50 shadow-md shadow-indigo-500/10 scale-[1.05]'
-                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                  ? 'relative z-10 bg-indigo-50 dark:bg-indigo-900/20 border-indigo-400 dark:border-indigo-500/50 shadow-md shadow-indigo-500/10 scale-[1.05]'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
                   }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${isLocal ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-500'
-                    }`}>
-                    {tz.city}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${isLocal ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-500'
+                      }`}>
+                      {tz.city}
+                    </span>
+                    <span className={`text-[9px] px-1 py-0.5 rounded font-medium ${isLocal
+                      ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                      }`}>
+                      {getTzAbbr(time, tz.zone)}
+                    </span>
+                  </div>
                   {isLocal && (
                     <span className="flex h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
                   )}

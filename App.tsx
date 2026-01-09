@@ -289,7 +289,7 @@ const App: React.FC = () => {
       />
 
       <main className="flex-1 overflow-y-auto min-w-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-10 py-8">
 
           {/* Top Clock Bar */}
           <WorldClock minimal={viewState.tab !== 'home'} />

@@ -93,7 +93,7 @@ const Homepage: React.FC<HomepageProps> = ({
   }, [notes]);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
+    <div className="w-full space-y-6 animate-fade-in">
       {/* Welcome Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-2">
         <div>

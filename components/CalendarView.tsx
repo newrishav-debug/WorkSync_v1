@@ -210,7 +210,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ events, onAddEvent, onUpdat
   };
 
   return (
-    <div className="h-[calc(100vh-6rem)] max-w-7xl mx-auto flex flex-col md:flex-row gap-6 animate-fade-in overflow-hidden">
+    <div className="h-[calc(100vh-6rem)] w-full flex flex-col md:flex-row gap-6 animate-fade-in overflow-hidden">
       <div className="w-full md:w-80 flex flex-col flex-shrink-0 gap-4 overflow-hidden h-full">
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
           <div className="flex items-center justify-between mb-4">

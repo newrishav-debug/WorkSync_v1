@@ -158,7 +158,7 @@ const InternalProjects: React.FC<InternalProjectsProps> = ({
     const sortedNotes = [...activeProject.researchNotes].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return (
-      <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
+      <div className="w-full space-y-6 animate-fade-in">
         <button
           onClick={() => setSelectedProjectId(null)}
           className="flex items-center text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors font-medium text-sm"
@@ -350,7 +350,7 @@ const InternalProjects: React.FC<InternalProjectsProps> = ({
 
   // --- RENDER: List View ---
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
+    <div className="w-full space-y-6 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
