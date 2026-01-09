@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Idea, IdeaCategory, IdeaPriority, IdeaStatus } from '../types';
-import { Plus, Lightbulb, Trash2, X, AlertCircle, Users, Settings, Tag, Filter, Calendar } from 'lucide-react';
+import { Idea, IdeaEntry, IdeaCategory, IdeaPriority, IdeaStatus } from '../types';
+import { Plus, Lightbulb, Trash2, X, AlertCircle, Users, Settings, Tag, Filter, Calendar, ArrowUpDown, Send, Sparkles, Loader2 } from 'lucide-react';
+import { generateIdeaSummary } from '../services/geminiService';
 
 interface IdeaBoardProps {
   ideas: Idea[];
@@ -14,14 +15,19 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
   const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<IdeaCategory | 'All'>('All');
 
+  // Entry sort order (newest first / oldest first) for the detail view
+  const [entrySortOrder, setEntrySortOrder] = useState<'newest' | 'oldest'>('oldest');
+
   // Editing state for auto-save
   const [editTitle, setEditTitle] = useState('');
-  const [editDescription, setEditDescription] = useState('');
+  const [newEntryContent, setNewEntryContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const entryInputRef = useRef<HTMLTextAreaElement>(null);
 
   const [newIdea, setNewIdea] = useState<Partial<Idea>>({
     title: '',
@@ -37,30 +43,28 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
   useEffect(() => {
     if (selectedIdea) {
       setEditTitle(selectedIdea.title);
-      setEditDescription(selectedIdea.description);
+      setNewEntryContent('');
       setLastSaved(null);
     }
   }, [selectedIdeaId, selectedIdea?.id]);
 
-  // Auto-save function
-  const saveIdea = useCallback(() => {
+  // Auto-save title changes
+  const saveTitleChange = useCallback(() => {
     if (!selectedIdea) return;
 
-    const hasChanges = editTitle !== selectedIdea.title || editDescription !== selectedIdea.description;
-    if (!hasChanges) return;
+    if (editTitle !== selectedIdea.title) {
+      setIsSaving(true);
+      const updatedIdea: Idea = {
+        ...selectedIdea,
+        title: editTitle
+      };
+      onUpdateIdea(updatedIdea);
+      setLastSaved(new Date());
+      setTimeout(() => setIsSaving(false), 500);
+    }
+  }, [selectedIdea, editTitle, onUpdateIdea]);
 
-    setIsSaving(true);
-    const updatedIdea: Idea = {
-      ...selectedIdea,
-      title: editTitle,
-      description: editDescription
-    };
-    onUpdateIdea(updatedIdea);
-    setLastSaved(new Date());
-    setTimeout(() => setIsSaving(false), 500);
-  }, [selectedIdea, editTitle, editDescription, onUpdateIdea]);
-
-  // Debounced auto-save on content change
+  // Debounced auto-save for title
   useEffect(() => {
     if (!selectedIdea) return;
 
@@ -69,7 +73,7 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
     }
 
     saveTimeoutRef.current = setTimeout(() => {
-      saveIdea();
+      saveTitleChange();
     }, 1000);
 
     return () => {
@@ -77,27 +81,106 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [editTitle, editDescription, selectedIdea?.id]);
+  }, [editTitle, selectedIdea?.id]);
+
+  // Check if we need a new date header (more than 1 day gap)
+  const needsNewDateHeader = (currentTimestamp: string, previousTimestamp: string | null): boolean => {
+    if (!previousTimestamp) return true;
+    const current = new Date(currentTimestamp);
+    const previous = new Date(previousTimestamp);
+    const diffMs = Math.abs(current.getTime() - previous.getTime());
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    return diffDays >= 1;
+  };
+
+  // Format date for header display
+  const formatDateHeader = (timestamp: string): string => {
+    const date = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    }
+  };
+
+  // Add a new entry
+  const addEntry = () => {
+    if (!selectedIdea || !newEntryContent.trim()) return;
+
+    const newEntry: IdeaEntry = {
+      id: crypto.randomUUID(),
+      content: newEntryContent.trim(),
+      timestamp: new Date().toISOString()
+    };
+
+    const updatedIdea: Idea = {
+      ...selectedIdea,
+      entries: [...(selectedIdea.entries || []), newEntry],
+      updatedAt: new Date().toISOString()
+    };
+
+    setIsSaving(true);
+    onUpdateIdea(updatedIdea);
+    setNewEntryContent('');
+    setLastSaved(new Date());
+    setTimeout(() => setIsSaving(false), 500);
+  };
+
+  // Handle Enter key in entry input
+  const handleEntryKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      addEntry();
+    }
+  };
+
+  // Delete an entry
+  const deleteEntry = (entryId: string) => {
+    if (!selectedIdea) return;
+
+    const updatedEntries = (selectedIdea.entries || []).filter(e => e.id !== entryId);
+    const updatedIdea: Idea = {
+      ...selectedIdea,
+      entries: updatedEntries,
+      updatedAt: new Date().toISOString()
+    };
+
+    onUpdateIdea(updatedIdea);
+  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newIdea.title?.trim() || !newIdea.description?.trim()) return;
 
+    const now = new Date().toISOString();
+    const firstEntry: IdeaEntry = {
+      id: crypto.randomUUID(),
+      content: newIdea.description,
+      timestamp: now
+    };
+
     const idea: Idea = {
       id: crypto.randomUUID(),
       title: newIdea.title,
-      description: newIdea.description,
+      description: newIdea.description, // Keep for backwards compatibility
+      entries: [firstEntry],
       category: newIdea.category as IdeaCategory,
       priority: newIdea.priority as IdeaPriority,
       status: 'New',
-      createdAt: new Date().toISOString()
+      createdAt: now
     };
 
     onAddIdea(idea);
     setNewIdea({ title: '', description: '', category: 'General', priority: 'Medium', status: 'New' });
     setIsModalOpen(false);
     setSelectedIdeaId(idea.id);
-    setTimeout(() => titleInputRef.current?.focus(), 100);
+    setTimeout(() => entryInputRef.current?.focus(), 100);
   };
 
   const getCategoryIcon = (category: IdeaCategory) => {
@@ -136,9 +219,28 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
     }
   };
 
+  // Sort ideas in list by creation date (newest first)
   const filteredIdeas = ideas
     .filter(idea => filterCategory === 'All' || idea.category === filterCategory)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  // Get sorted entries for display
+  const getSortedEntries = (entries: IdeaEntry[]): IdeaEntry[] => {
+    const sorted = [...(entries || [])].sort((a, b) => {
+      const aTime = new Date(a.timestamp).getTime();
+      const bTime = new Date(b.timestamp).getTime();
+      return entrySortOrder === 'newest' ? bTime - aTime : aTime - bTime;
+    });
+    return sorted;
+  };
+
+  // Get first entry content for preview
+  const getIdeaPreview = (idea: Idea): string => {
+    if (idea.entries && idea.entries.length > 0) {
+      return idea.entries[0].content;
+    }
+    return idea.description || '';
+  };
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
@@ -206,10 +308,13 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
                     </span>
                   </div>
                   <h4 className="font-semibold text-slate-800 dark:text-white text-sm truncate">{idea.title}</h4>
-                  <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 line-clamp-2">{idea.description}</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 line-clamp-2">{getIdeaPreview(idea)}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${getStatusColor(idea.status)}`}>
                       {idea.status}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {idea.entries?.length || 1} {(idea.entries?.length || 1) === 1 ? 'entry' : 'entries'}
                     </span>
                     <span className="text-[10px] text-slate-400">
                       {new Date(idea.createdAt).toLocaleDateString()}
@@ -236,16 +341,26 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
                     <span>Auto-save enabled</span>
                   )}
                 </div>
-                <button
-                  onClick={() => {
-                    onDeleteIdea(selectedIdea.id);
-                    setSelectedIdeaId(null);
-                  }}
-                  className="text-slate-400 hover:text-red-500 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  title="Delete idea"
-                >
-                  <Trash2 size={18} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setEntrySortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
+                    className="flex items-center gap-1.5 px-2 py-1 text-xs text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                    title={`Currently showing ${entrySortOrder} first`}
+                  >
+                    <ArrowUpDown size={14} />
+                    {entrySortOrder === 'newest' ? 'Newest first' : 'Oldest first'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDeleteIdea(selectedIdea.id);
+                      setSelectedIdeaId(null);
+                    }}
+                    className="text-slate-400 hover:text-red-500 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    title="Delete idea"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               </div>
 
               {/* Status, Category, Priority Controls */}
@@ -292,27 +407,166 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
                   </div>
                   <div className="flex items-center gap-1 text-xs text-slate-400 ml-auto">
                     <Calendar size={12} />
-                    {new Date(selectedIdea.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    Created {new Date(selectedIdea.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </div>
                 </div>
               </div>
 
-              {/* Editable Content */}
-              <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
+              {/* Title */}
+              <div className="px-6 pt-4">
                 <input
                   ref={titleInputRef}
                   type="text"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full text-2xl font-bold bg-transparent border-none pb-4 focus:outline-none text-slate-800 dark:text-white placeholder-slate-400"
+                  className="w-full text-2xl font-bold bg-transparent border-none pb-2 focus:outline-none text-slate-800 dark:text-white placeholder-slate-400"
                   placeholder="Idea title..."
                 />
-                <textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  className="w-full h-[350px] bg-transparent focus:outline-none resize-none text-slate-700 dark:text-slate-300 placeholder-slate-400 leading-relaxed"
-                  placeholder="Describe your idea..."
-                />
+              </div>
+
+              {/* AI Summary Section */}
+              <div className="mx-6 mb-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/50 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold text-indigo-900 dark:text-indigo-300 flex items-center gap-2">
+                    <Sparkles size={16} className="text-indigo-500" />
+                    AI Summary
+                  </h4>
+                  <button
+                    onClick={async () => {
+                      if (!selectedIdea) return;
+                      setIsGeneratingSummary(true);
+                      try {
+                        const summary = await generateIdeaSummary(selectedIdea);
+                        onUpdateIdea({
+                          ...selectedIdea,
+                          aiSummary: summary,
+                          lastSummaryDate: new Date().toISOString()
+                        });
+                      } catch (error) {
+                        console.error('Failed to generate summary:', error);
+                        alert('Failed to generate summary. Please check your API key.');
+                      } finally {
+                        setIsGeneratingSummary(false);
+                      }
+                    }}
+                    disabled={isGeneratingSummary || !selectedIdea.entries?.length}
+                    className="text-xs bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-3 py-1 rounded-full font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  >
+                    {isGeneratingSummary ? (
+                      <>
+                        <Loader2 size={12} className="animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={12} />
+                        {selectedIdea.aiSummary ? 'Refresh' : 'Generate'}
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                  {selectedIdea.aiSummary ? (
+                    <>
+                      <p className="whitespace-pre-wrap">{selectedIdea.aiSummary}</p>
+                      {selectedIdea.lastSummaryDate && (
+                        <p className="text-[10px] text-slate-400 mt-2">
+                          Generated: {new Date(selectedIdea.lastSummaryDate).toLocaleString()}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-slate-400 dark:text-slate-500 italic text-xs">
+                      {selectedIdea.entries?.length ? 'Click "Generate" to create an AI summary of this idea\'s evolution.' : 'Add some entries first, then generate a summary.'}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Entries Timeline */}
+              <div className="flex-1 px-6 py-4 overflow-y-auto custom-scrollbar">
+                {(() => {
+                  const sortedEntries = getSortedEntries(selectedIdea.entries || []);
+                  let lastDateHeader: string | null = null;
+
+                  return sortedEntries.map((entry, index) => {
+                    const showHeader = needsNewDateHeader(
+                      entry.timestamp,
+                      index > 0 ? sortedEntries[index - 1].timestamp : null
+                    );
+
+                    const dateHeader = showHeader ? formatDateHeader(entry.timestamp) : null;
+
+                    // For oldest-first, we check against previous entry
+                    // For newest-first, headers work the same way
+                    const displayHeader = dateHeader && dateHeader !== lastDateHeader;
+                    if (displayHeader) {
+                      lastDateHeader = dateHeader;
+                    }
+
+                    return (
+                      <div key={entry.id}>
+                        {displayHeader && (
+                          <div className="flex items-center gap-3 my-4">
+                            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 px-2">
+                              {dateHeader}
+                            </span>
+                            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+                          </div>
+                        )}
+                        <div className="group relative mb-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                          <p className="text-slate-700 dark:text-slate-300 text-sm whitespace-pre-wrap leading-relaxed pr-8">
+                            {entry.content}
+                          </p>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-[10px] text-slate-400">
+                              {new Date(entry.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                            </span>
+                            <button
+                              onClick={() => deleteEntry(entry.id)}
+                              className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 p-1 rounded transition-all"
+                              title="Delete entry"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+
+                {(!selectedIdea.entries || selectedIdea.entries.length === 0) && (
+                  <div className="text-center py-8 text-slate-400">
+                    <p className="text-sm">No entries yet. Add your first entry below.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Add Entry Input */}
+              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+                <div className="flex gap-2">
+                  <textarea
+                    ref={entryInputRef}
+                    value={newEntryContent}
+                    onChange={(e) => setNewEntryContent(e.target.value)}
+                    onKeyDown={handleEntryKeyDown}
+                    className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                    placeholder="Add a new entry... (Press Enter to save)"
+                    rows={2}
+                  />
+                  <button
+                    onClick={addEntry}
+                    disabled={!newEntryContent.trim()}
+                    className="self-end bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2"
+                  >
+                    <Send size={16} />
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Press Enter to add entry, Shift+Enter for new line
+                </p>
               </div>
             </>
           ) : (
@@ -398,7 +652,7 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Initial Entry</label>
                 <textarea
                   required
                   placeholder="Describe the idea, enhancement or improvement..."

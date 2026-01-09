@@ -99,11 +99,35 @@ function initDatabase() {
       userId TEXT,
       title TEXT,
       description TEXT,
+      entries TEXT,
       category TEXT,
       priority TEXT,
       status TEXT,
-      createdAt TEXT
+      createdAt TEXT,
+      updatedAt TEXT,
+      aiSummary TEXT,
+      lastSummaryDate TEXT
     )`);
+
+    // Migration: Add updatedAt column to ideas table if it doesn't exist
+    db.run(`ALTER TABLE ideas ADD COLUMN updatedAt TEXT`, (err) => {
+      // Ignore error - column already exists
+    });
+
+    // Migration: Add entries column to ideas table if it doesn't exist
+    db.run(`ALTER TABLE ideas ADD COLUMN entries TEXT`, (err) => {
+      // Ignore error - column already exists
+    });
+
+    // Migration: Add aiSummary column to ideas table if it doesn't exist
+    db.run(`ALTER TABLE ideas ADD COLUMN aiSummary TEXT`, (err) => {
+      // Ignore error - column already exists
+    });
+
+    // Migration: Add lastSummaryDate column to ideas table if it doesn't exist
+    db.run(`ALTER TABLE ideas ADD COLUMN lastSummaryDate TEXT`, (err) => {
+      // Ignore error - column already exists
+    });
 
     // 8. Calendar Events Table
     db.run(`CREATE TABLE IF NOT EXISTS calendar_events (

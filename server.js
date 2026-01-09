@@ -279,13 +279,35 @@ app.delete('/api/highlights/:id', authMiddleware, (req, res) => {
 app.get('/api/ideas', authMiddleware, (req, res) => {
     db.all("SELECT * FROM ideas WHERE userId = ?", [req.userId], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+        // Parse entries JSON and migrate legacy descriptions
+        const formatted = rows.map(r => {
+            let entries = [];
+            try {
+                entries = JSON.parse(r.entries || '[]');
+            } catch (e) {
+                entries = [];
+            }
+            // Migrate legacy description to entries if entries is empty and description exists
+            if (entries.length === 0 && r.description && r.description.trim()) {
+                entries = [{
+                    id: 'legacy-' + r.id,
+                    content: r.description,
+                    timestamp: r.createdAt || new Date().toISOString()
+                }];
+            }
+            return { ...r, entries };
+        });
+        res.json(formatted);
     });
 });
 app.post('/api/ideas', authMiddleware, (req, res) => {
     const i = req.body;
-    const sql = `INSERT OR REPLACE INTO ideas (id, userId, title, description, category, priority, status, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-    db.run(sql, [i.id, req.userId, i.title, i.description, i.category, i.priority, i.status, i.createdAt], function (err) {
+    // Store entries as JSON string
+    const entriesJson = JSON.stringify(i.entries || []);
+    // Keep description as first entry content for backwards compatibility
+    const description = i.entries && i.entries.length > 0 ? i.entries[0].content : (i.description || '');
+    const sql = `INSERT OR REPLACE INTO ideas (id, userId, title, description, entries, category, priority, status, createdAt, updatedAt, aiSummary, lastSummaryDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    db.run(sql, [i.id, req.userId, i.title, description, entriesJson, i.category, i.priority, i.status, i.createdAt, i.updatedAt || null, i.aiSummary || null, i.lastSummaryDate || null], function (err) {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ message: "Saved" });
     });

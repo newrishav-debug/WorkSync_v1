@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { Engagement } from '../types';
+import { Engagement, Idea } from '../types';
 
 /**
  * Generates an executive summary for a client engagement using Gemini AI.
@@ -41,11 +41,59 @@ export const generateEngagementSummary = async (engagement: Engagement): Promise
       model: 'gemini-3-flash-preview',
       contents: prompt,
     });
-    
+
     // Extracting text output from GenerateContentResponse using the .text property
     return response.text || "Unable to generate summary at this time.";
   } catch (error) {
     console.error("Gemini API Error:", error);
     throw new Error("Failed to generate summary via Gemini AI.");
+  }
+};
+
+/**
+ * Generates a summary of an idea's evolution based on its chronological entries.
+ */
+export const generateIdeaSummary = async (idea: Idea): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  // Format entries chronologically (oldest to newest for narrative flow)
+  const entriesText = (idea.entries || [])
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+    .map(e => `- [${new Date(e.timestamp).toLocaleDateString()}]: ${e.content}`)
+    .join('\n');
+
+  if (!entriesText.trim()) {
+    return "No entries yet to summarize.";
+  }
+
+  const prompt = `
+    You are an AI assistant helping to summarize the evolution of an idea.
+    
+    Idea: "${idea.title}"
+    Category: ${idea.category}
+    Priority: ${idea.priority}
+    Status: ${idea.status}
+
+    Chronological Entries (Oldest to Newest):
+    ${entriesText}
+
+    Please provide a brief summary (max 80 words) that captures:
+    1. The core concept of the idea
+    2. How the thinking has evolved over time
+    3. Current state or next steps if mentioned
+
+    Write in a natural, conversational tone. No markdown formatting. Keep it concise and insightful.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+    });
+
+    return response.text || "Unable to generate summary at this time.";
+  } catch (error) {
+    console.error("Gemini API Error:", error);
+    throw new Error("Failed to generate idea summary via Gemini AI.");
   }
 };

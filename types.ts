@@ -98,14 +98,24 @@ export type IdeaCategory = 'Team' | 'Product' | 'Process' | 'General';
 export type IdeaPriority = 'Low' | 'Medium' | 'High';
 export type IdeaStatus = 'New' | 'Planned' | 'In Progress' | 'Implemented' | 'Discarded';
 
+export interface IdeaEntry {
+  id: string;
+  content: string;
+  timestamp: string; // ISO date string
+}
+
 export interface Idea {
   id: string;
   title: string;
-  description: string;
+  description: string; // Legacy field for backwards compatibility
+  entries: IdeaEntry[]; // New: chronological entries
   category: IdeaCategory;
   priority: IdeaPriority;
   status: IdeaStatus;
   createdAt: string;
+  updatedAt?: string;
+  aiSummary?: string;
+  lastSummaryDate?: string;
 }
 
 export interface CalendarEvent {
