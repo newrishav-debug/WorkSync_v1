@@ -129,6 +129,31 @@ function initDatabase() {
       // Ignore error - column already exists
     });
 
+    // Migration: Idea Flow Path - Add engagement link to ideas
+    db.run(`ALTER TABLE ideas ADD COLUMN engagementId TEXT`, (err) => {
+      // Ignore error - column already exists
+    });
+    db.run(`ALTER TABLE ideas ADD COLUMN engagementName TEXT`, (err) => {
+      // Ignore error - column already exists
+    });
+    db.run(`ALTER TABLE ideas ADD COLUMN convertedToProjectId TEXT`, (err) => {
+      // Ignore error - column already exists
+    });
+
+    // Migration: Idea Flow Path - Add source tracking to projects
+    db.run(`ALTER TABLE projects ADD COLUMN sourceIdeaId TEXT`, (err) => {
+      // Ignore error - column already exists
+    });
+    db.run(`ALTER TABLE projects ADD COLUMN sourceIdeaTitle TEXT`, (err) => {
+      // Ignore error - column already exists
+    });
+    db.run(`ALTER TABLE projects ADD COLUMN sourceEngagementId TEXT`, (err) => {
+      // Ignore error - column already exists
+    });
+    db.run(`ALTER TABLE projects ADD COLUMN sourceEngagementName TEXT`, (err) => {
+      // Ignore error - column already exists
+    });
+
     // 8. Calendar Events Table
     db.run(`CREATE TABLE IF NOT EXISTS calendar_events (
       id TEXT PRIMARY KEY,

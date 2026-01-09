@@ -317,7 +317,17 @@ const App: React.FC = () => {
                 <Dashboard engagements={engagements} onNavigate={handleNavigate} onAdd={() => setIsAddModalOpen(true)} onUpdate={handleUpdateEngagement} onEdit={(e) => setEditingEngagement(e)} onDelete={handleDeleteRequest} isDarkMode={isDarkMode} />
               )}
               {viewState.view === 'detail' && currentEngagement && (
-                <EngagementDetail engagement={currentEngagement} tasks={masterTasksList} onBack={handleBack} onUpdate={handleUpdateEngagement} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} />
+                <EngagementDetail
+                  engagement={currentEngagement}
+                  tasks={masterTasksList}
+                  onBack={handleBack}
+                  onUpdate={handleUpdateEngagement}
+                  onAddTask={handleAddTask}
+                  onUpdateTask={handleUpdateTask}
+                  onDeleteTask={handleDeleteTask}
+                  onAddIdea={handleAddIdea}
+                  onNavigateToIdeas={() => handleTabChange('ideas')}
+                />
               )}
             </>
           )}
@@ -325,7 +335,18 @@ const App: React.FC = () => {
           {viewState.tab === 'tasks' && <TaskTracker tasks={masterTasksList} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} />}
           {viewState.tab === 'highlights' && <Highlights highlights={highlights} onAddHighlight={handleAddHighlight} onUpdateHighlight={handleUpdateHighlight} onDeleteHighlight={handleDeleteHighlight} />}
           {viewState.tab === 'projects' && <InternalProjects projects={projects} onAddProject={handleAddProject} onUpdateProject={handleUpdateProject} onDeleteProject={handleDeleteProject} />}
-          {viewState.tab === 'ideas' && <IdeaBoard ideas={ideas} onAddIdea={handleAddIdea} onUpdateIdea={handleUpdateIdea} onDeleteIdea={handleDeleteIdea} />}
+          {viewState.tab === 'ideas' && <IdeaBoard
+            ideas={ideas}
+            onAddIdea={handleAddIdea}
+            onUpdateIdea={handleUpdateIdea}
+            onDeleteIdea={handleDeleteIdea}
+            engagements={engagements}
+            onAddProject={handleAddProject}
+            onNavigateToProject={(projectId) => {
+              handleTabChange('projects');
+              // The projects view will show the project
+            }}
+          />}
           {viewState.tab === 'calendar' && <CalendarView events={calendarEvents} onAddEvent={handleAddEvent} onUpdateEvent={handleUpdateEvent} onDeleteEvent={handleDeleteEvent} />}
           {viewState.tab === 'links' && <UsefulLinks links={usefulLinks} onAddLink={handleAddLink} onDeleteLink={handleDeleteLink} />}
           {viewState.tab === 'notes' && <Notes notes={notes} onAddNote={handleAddNote} onUpdateNote={handleUpdateNote} onDeleteNote={handleDeleteNote} />}

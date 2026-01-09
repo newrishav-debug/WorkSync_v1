@@ -198,6 +198,17 @@ export const deleteIdeaAPI = async (id: string): Promise<void> => {
     await handleResponse(res, 'delete idea');
 };
 
+// Idea Flow Path: Convert idea to project
+export const convertIdeaToProjectAPI = async (ideaId: string, projectData?: Partial<InternalProject>): Promise<InternalProject> => {
+    const res = await fetch(`${API_BASE}/ideas/${ideaId}/convert-to-project`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify(projectData || {}),
+    });
+    await handleResponse(res, 'convert idea to project');
+    return res.json();
+};
+
 // --- Calendar Events ---
 export const fetchCalendarEvents = async (): Promise<CalendarEvent[]> => {
     const res = await fetch(`${API_BASE}/calendar`, {

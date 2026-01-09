@@ -212,9 +212,9 @@ app.get('/api/projects', authMiddleware, (req, res) => {
 
 app.post('/api/projects', authMiddleware, (req, res) => {
     const p = req.body;
-    // Save Project
-    const sqlP = `INSERT OR REPLACE INTO projects (id, userId, name, description, status, startDate, dueDate, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-    db.run(sqlP, [p.id, req.userId, p.name, p.description, p.status, p.startDate, p.dueDate, p.createdAt], (err) => {
+    // Save Project with source tracking fields
+    const sqlP = `INSERT OR REPLACE INTO projects (id, userId, name, description, status, startDate, dueDate, createdAt, sourceIdeaId, sourceIdeaTitle, sourceEngagementId, sourceEngagementName) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    db.run(sqlP, [p.id, req.userId, p.name, p.description, p.status, p.startDate, p.dueDate, p.createdAt, p.sourceIdeaId || null, p.sourceIdeaTitle || null, p.sourceEngagementId || null, p.sourceEngagementName || null], (err) => {
         if (err) return res.status(500).json({ error: err.message });
 
         // Naive delete-insert for children
@@ -232,6 +232,62 @@ app.post('/api/projects', authMiddleware, (req, res) => {
         });
 
         res.json({ message: "Project synced" });
+    });
+});
+
+// Convert Idea to Project (Idea Flow Path)
+app.post('/api/ideas/:id/convert-to-project', authMiddleware, (req, res) => {
+    const ideaId = req.params.id;
+    const projectData = req.body;
+
+    // First, get the idea to extract source info
+    db.get("SELECT * FROM ideas WHERE id = ? AND userId = ?", [ideaId, req.userId], (err, idea) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!idea) return res.status(404).json({ error: 'Idea not found' });
+
+        const projectId = 'proj-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        const now = new Date().toISOString();
+
+        // Create the project with source tracking
+        const sqlP = `INSERT INTO projects (id, userId, name, description, status, startDate, dueDate, createdAt, sourceIdeaId, sourceIdeaTitle, sourceEngagementId, sourceEngagementName) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        const projectName = projectData.name || idea.title;
+        const projectDescription = projectData.description || idea.description;
+        const projectStatus = projectData.status || 'Not Started';
+        const startDate = projectData.startDate || now.slice(0, 10);
+        const dueDate = projectData.dueDate || '';
+
+        db.run(sqlP, [
+            projectId, req.userId, projectName, projectDescription, projectStatus,
+            startDate, dueDate, now,
+            idea.id, idea.title, idea.engagementId || null, idea.engagementName || null
+        ], function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+
+            // Update the idea to mark it as converted
+            db.run("UPDATE ideas SET convertedToProjectId = ?, status = 'Implemented' WHERE id = ? AND userId = ?",
+                [projectId, ideaId, req.userId],
+                function (err) {
+                    if (err) return res.status(500).json({ error: err.message });
+
+                    // Return the created project
+                    res.json({
+                        id: projectId,
+                        name: projectName,
+                        description: projectDescription,
+                        status: projectStatus,
+                        startDate: startDate,
+                        dueDate: dueDate,
+                        createdAt: now,
+                        tasks: [],
+                        researchNotes: [],
+                        sourceIdeaId: idea.id,
+                        sourceIdeaTitle: idea.title,
+                        sourceEngagementId: idea.engagementId || null,
+                        sourceEngagementName: idea.engagementName || null
+                    });
+                }
+            );
+        });
     });
 });
 
@@ -306,8 +362,8 @@ app.post('/api/ideas', authMiddleware, (req, res) => {
     const entriesJson = JSON.stringify(i.entries || []);
     // Keep description as first entry content for backwards compatibility
     const description = i.entries && i.entries.length > 0 ? i.entries[0].content : (i.description || '');
-    const sql = `INSERT OR REPLACE INTO ideas (id, userId, title, description, entries, category, priority, status, createdAt, updatedAt, aiSummary, lastSummaryDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    db.run(sql, [i.id, req.userId, i.title, description, entriesJson, i.category, i.priority, i.status, i.createdAt, i.updatedAt || null, i.aiSummary || null, i.lastSummaryDate || null], function (err) {
+    const sql = `INSERT OR REPLACE INTO ideas (id, userId, title, description, entries, category, priority, status, createdAt, updatedAt, aiSummary, lastSummaryDate, engagementId, engagementName, convertedToProjectId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    db.run(sql, [i.id, req.userId, i.title, description, entriesJson, i.category, i.priority, i.status, i.createdAt, i.updatedAt || null, i.aiSummary || null, i.lastSummaryDate || null, i.engagementId || null, i.engagementName || null, i.convertedToProjectId || null], function (err) {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ message: "Saved" });
     });

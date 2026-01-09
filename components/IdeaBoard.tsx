@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Idea, IdeaEntry, IdeaCategory, IdeaPriority, IdeaStatus } from '../types';
-import { Plus, Lightbulb, Trash2, X, AlertCircle, Users, Settings, Tag, Filter, Calendar, ArrowUpDown, Send, Sparkles, Loader2 } from 'lucide-react';
+import { Idea, IdeaEntry, IdeaCategory, IdeaPriority, IdeaStatus, Engagement, InternalProject } from '../types';
+import { Plus, Lightbulb, Trash2, X, AlertCircle, Users, Settings, Tag, Filter, Calendar, ArrowUpDown, Send, Sparkles, Loader2, Link2, FolderPlus, ExternalLink, Briefcase } from 'lucide-react';
 import { generateIdeaSummary } from '../services/geminiService';
+import { convertIdeaToProjectAPI } from '../services/apiService';
 
 interface IdeaBoardProps {
   ideas: Idea[];
   onAddIdea: (idea: Idea) => void;
   onUpdateIdea: (idea: Idea) => void;
   onDeleteIdea: (id: string) => void;
+  engagements?: Engagement[];
+  onAddProject?: (project: InternalProject) => void;
+  onNavigateToProject?: (projectId: string) => void;
 }
 
-const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, onDeleteIdea }) => {
+const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, onDeleteIdea, engagements = [], onAddProject, onNavigateToProject }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<IdeaCategory | 'All'>('All');
@@ -24,6 +28,13 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
+
+  // Engagement search state
+  const [engSearchTerm, setEngSearchTerm] = useState('');
+  const [engSearchFocused, setEngSearchFocused] = useState(false);
+  const [modalEngSearchTerm, setModalEngSearchTerm] = useState('');
+  const [modalEngSearchFocused, setModalEngSearchFocused] = useState(false);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -34,7 +45,9 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
     description: '',
     category: 'General',
     priority: 'Medium',
-    status: 'New'
+    status: 'New',
+    engagementId: '',
+    engagementName: ''
   });
 
   const selectedIdea = ideas.find(i => i.id === selectedIdeaId);
@@ -173,14 +186,49 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
       category: newIdea.category as IdeaCategory,
       priority: newIdea.priority as IdeaPriority,
       status: 'New',
-      createdAt: now
+      createdAt: now,
+      engagementId: newIdea.engagementId || undefined,
+      engagementName: newIdea.engagementName || undefined
     };
 
     onAddIdea(idea);
-    setNewIdea({ title: '', description: '', category: 'General', priority: 'Medium', status: 'New' });
+    setNewIdea({ title: '', description: '', category: 'General', priority: 'Medium', status: 'New', engagementId: '', engagementName: '' });
     setIsModalOpen(false);
     setSelectedIdeaId(idea.id);
     setTimeout(() => entryInputRef.current?.focus(), 100);
+  };
+
+  // Convert idea to project
+  const handleConvertToProject = async () => {
+    if (!selectedIdea || !onAddProject) return;
+
+    setIsConverting(true);
+    try {
+      const project = await convertIdeaToProjectAPI(selectedIdea.id, {
+        startDate: new Date().toISOString().slice(0, 10)
+      });
+
+      // Update local idea state with converted status
+      const updatedIdea: Idea = {
+        ...selectedIdea,
+        convertedToProjectId: project.id,
+        status: 'Implemented'
+      };
+      onUpdateIdea(updatedIdea);
+
+      // Add the new project
+      onAddProject(project);
+
+      // Navigate to the project if handler provided
+      if (onNavigateToProject) {
+        onNavigateToProject(project.id);
+      }
+    } catch (error) {
+      console.error('Failed to convert idea to project:', error);
+      alert('Failed to convert idea to project. Please try again.');
+    } finally {
+      setIsConverting(false);
+    }
   };
 
   const getCategoryIcon = (category: IdeaCategory) => {
@@ -409,6 +457,106 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
                     <Calendar size={12} />
                     Created {new Date(selectedIdea.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </div>
+                </div>
+                {/* Engagement Link & Convert to Project */}
+                <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center gap-2 relative">
+                    <Briefcase size={14} className="text-slate-400" />
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Engagement:</span>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none px-2 py-1 rounded-lg text-slate-700 dark:text-slate-300 w-48 focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Search by Eng #..."
+                        value={engSearchTerm || (selectedIdea.engagementId ? engagements.find(e => e.id === selectedIdea.engagementId)?.engagementNumber || '' : '')}
+                        onChange={(e) => setEngSearchTerm(e.target.value)}
+                        onFocus={() => {
+                          setEngSearchFocused(true);
+                          setEngSearchTerm('');
+                        }}
+                        onBlur={() => setTimeout(() => setEngSearchFocused(false), 200)}
+                      />
+                      {engSearchFocused && (
+                        <div className="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                          <button
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700"
+                            onClick={() => {
+                              onUpdateIdea({ ...selectedIdea, engagementId: undefined, engagementName: undefined });
+                              setEngSearchTerm('');
+                              setEngSearchFocused(false);
+                            }}
+                          >
+                            None (General Idea)
+                          </button>
+                          {engagements
+                            .filter(eng =>
+                              !engSearchTerm ||
+                              eng.engagementNumber.toLowerCase().includes(engSearchTerm.toLowerCase()) ||
+                              eng.accountName.toLowerCase().includes(engSearchTerm.toLowerCase())
+                            )
+                            .map(eng => (
+                              <button
+                                key={eng.id}
+                                type="button"
+                                className="w-full text-left px-3 py-2 text-xs hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+                                onClick={() => {
+                                  onUpdateIdea({ ...selectedIdea, engagementId: eng.id, engagementName: eng.name });
+                                  setEngSearchTerm('');
+                                  setEngSearchFocused(false);
+                                }}
+                              >
+                                <span className="font-bold text-indigo-600 dark:text-indigo-400">{eng.engagementNumber}</span>
+                                <span className="text-slate-500 dark:text-slate-400"> - {eng.accountName}</span>
+                              </button>
+                            ))
+                          }
+                          {engagements.filter(eng =>
+                            !engSearchTerm ||
+                            eng.engagementNumber.toLowerCase().includes(engSearchTerm.toLowerCase()) ||
+                            eng.accountName.toLowerCase().includes(engSearchTerm.toLowerCase())
+                          ).length === 0 && (
+                              <div className="px-3 py-2 text-xs text-slate-400 italic">No matching engagements</div>
+                            )}
+                        </div>
+                      )}
+                    </div>
+                    {selectedIdea.engagementId && (
+                      <span className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded">
+                        {engagements.find(e => e.id === selectedIdea.engagementId)?.accountName || 'Linked'}
+                      </span>
+                    )}
+                  </div>
+                  {/* Convert to Project Button */}
+                  {!selectedIdea.convertedToProjectId && onAddProject && (
+                    <button
+                      onClick={handleConvertToProject}
+                      disabled={isConverting}
+                      className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white rounded-lg transition-colors shadow-sm"
+                      title="Convert this idea into an internal project"
+                    >
+                      {isConverting ? (
+                        <><Loader2 size={12} className="animate-spin" /> Converting...</>
+                      ) : (
+                        <><FolderPlus size={14} /> Convert to Project</>
+                      )}
+                    </button>
+                  )}
+                  {/* Show link to project if converted */}
+                  {selectedIdea.convertedToProjectId && (
+                    <div className="ml-auto flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 rounded-lg">
+                      <FolderPlus size={14} />
+                      <span className="font-medium">Converted to Project</span>
+                      {onNavigateToProject && (
+                        <button
+                          onClick={() => onNavigateToProject(selectedIdea.convertedToProjectId!)}
+                          className="text-emerald-700 dark:text-emerald-300 hover:underline flex items-center gap-1"
+                        >
+                          View <ExternalLink size={10} />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -661,6 +809,81 @@ const IdeaBoard: React.FC<IdeaBoardProps> = ({ ideas, onAddIdea, onUpdateIdea, o
                   onChange={e => setNewIdea({ ...newIdea, description: e.target.value })}
                 />
               </div>
+
+              {/* Engagement Selector (Optional) */}
+              {engagements.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <span className="flex items-center gap-1.5">
+                      <Briefcase size={14} />
+                      Link to Engagement <span className="text-slate-400 font-normal">(Optional)</span>
+                    </span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-colors"
+                      placeholder="Search by Engagement Number..."
+                      value={modalEngSearchTerm || (newIdea.engagementId ? engagements.find(e => e.id === newIdea.engagementId)?.engagementNumber || '' : '')}
+                      onChange={(e) => setModalEngSearchTerm(e.target.value)}
+                      onFocus={() => {
+                        setModalEngSearchFocused(true);
+                        setModalEngSearchTerm('');
+                      }}
+                      onBlur={() => setTimeout(() => setModalEngSearchFocused(false), 200)}
+                    />
+                    {newIdea.engagementId && (
+                      <div className="mt-1 text-xs text-indigo-600 dark:text-indigo-400">
+                        Selected: {engagements.find(e => e.id === newIdea.engagementId)?.accountName} - {newIdea.engagementName}
+                      </div>
+                    )}
+                    {modalEngSearchFocused && (
+                      <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700"
+                          onClick={() => {
+                            setNewIdea({ ...newIdea, engagementId: '', engagementName: '' });
+                            setModalEngSearchTerm('');
+                            setModalEngSearchFocused(false);
+                          }}
+                        >
+                          None (General Idea)
+                        </button>
+                        {engagements
+                          .filter(eng =>
+                            !modalEngSearchTerm ||
+                            eng.engagementNumber.toLowerCase().includes(modalEngSearchTerm.toLowerCase()) ||
+                            eng.accountName.toLowerCase().includes(modalEngSearchTerm.toLowerCase())
+                          )
+                          .map(eng => (
+                            <button
+                              key={eng.id}
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+                              onClick={() => {
+                                setNewIdea({ ...newIdea, engagementId: eng.id, engagementName: eng.name });
+                                setModalEngSearchTerm('');
+                                setModalEngSearchFocused(false);
+                              }}
+                            >
+                              <span className="font-bold text-indigo-600 dark:text-indigo-400">{eng.engagementNumber}</span>
+                              <span className="text-slate-500 dark:text-slate-400"> - {eng.accountName}</span>
+                            </button>
+                          ))
+                        }
+                        {engagements.filter(eng =>
+                          !modalEngSearchTerm ||
+                          eng.engagementNumber.toLowerCase().includes(modalEngSearchTerm.toLowerCase()) ||
+                          eng.accountName.toLowerCase().includes(modalEngSearchTerm.toLowerCase())
+                        ).length === 0 && (
+                            <div className="px-3 py-2 text-sm text-slate-400 italic">No matching engagements</div>
+                          )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="pt-4 flex justify-end gap-3">
                 <button

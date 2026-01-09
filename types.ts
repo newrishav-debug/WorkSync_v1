@@ -92,6 +92,11 @@ export interface InternalProject {
   tasks: ProjectTask[];
   researchNotes: ResearchNote[];
   createdAt: string;
+  // Idea Flow Path: Track origin
+  sourceIdeaId?: string;
+  sourceIdeaTitle?: string;
+  sourceEngagementId?: string;
+  sourceEngagementName?: string;
 }
 
 export type IdeaCategory = 'Team' | 'Product' | 'Process' | 'General';
@@ -116,6 +121,10 @@ export interface Idea {
   updatedAt?: string;
   aiSummary?: string;
   lastSummaryDate?: string;
+  // Idea Flow Path: Track source and conversion
+  engagementId?: string;
+  engagementName?: string;
+  convertedToProjectId?: string;
 }
 
 export interface CalendarEvent {
